@@ -31,7 +31,15 @@ package_entities
 
 data_entity <- read_data_entity(
   packageId = package_id,
-  entityId = "65056476604ff22cb44dcc3d3bebfd2a"
+  entityId = "65056476604ff22cb44dcc3d3bebfd2a" 
 )
 
 sev_2020_2023 <- read_csv(data_entity)
+
+#Almost all -40 values from station 42
+sev_neg40 <- sev_2020_2023 %>% 
+  filter(Temp_C == -40) %>% 
+  group_by(StationID) %>% 
+  summarise(
+    n=n()
+  )
