@@ -106,8 +106,9 @@ ggplot(cooks_df, aes(x = seq_along(.cooksd), y = .cooksd)) +
 # Find points that are potentially outliers based on (studentized) residuals
 # ie. poorly fit model
 car::outlierTest(monthtemp_mod)
-# Indicates only a single observation's residuals are outliers after correction
-# for this model, but let's diver deeper into the observations themselves
+# Indicates only a single observation's residuals (obs 170995) are outlying
+# after correction for this model.
+# But let's diver deeper into the observations themselves...
 
 
 ### --- EXPLORE OBSERVATIONS --- ###
@@ -156,28 +157,42 @@ monthly_averages <- sev_2020_2023 %>%
     mean_precip = mean(Precipitation, na.rm = TRUE)
   )
 monthly_averages
-
 # Station 42 and 44 seem to have erroneous data
 # We will remove to look at monthly average temp for 2020-2023
-monthly_avg_no_42_44 <- monthly_averages %>% 
-  filter(StationID != 42, StationID != 44) %>% 
-  group_by(Month) %>% 
-  summarise(mean_temp_c = mean(mean_temp_c, na.rm = TRUE))
-monthly_avg_no_42_44
 
-#Plot average monthly temperature, excluding station 42, 44 data
-ggplot(monthly_avg_no_42_44, aes(x = Month, y = mean_temp_c)) +
-  geom_line() +
-  scale_x_continuous(breaks = seq(0, 12, 1)) +
+# Compare monthly avgs with and without stations 42, 44
+monthly_avg_all <- monthly_averages %>%
+  group_by(Month) %>%
+  summarise(mean_temp_c = mean(mean_temp_c, na.rm = TRUE)) %>%
+  mutate(dataset = "All Stations")
+
+monthly_avg_no_42_44 <- monthly_averages %>%
+  filter(StationID != 42, StationID != 44) %>%
+  group_by(Month) %>%
+  summarise(mean_temp_c = mean(mean_temp_c, na.rm = TRUE)) %>%
+  mutate(dataset = "Excluding 42 & 44")
+
+monthly_combined <- bind_rows(monthly_avg_all, monthly_avg_no_42_44) # combine
+
+#Plot average monthly temperatures side-by-side
+ggplot(monthly_combined, aes(x = Month, y = mean_temp_c)) +
+  geom_line(color = "black", size = 1) +
+  geom_point(color = "black", size = 2) +
+  scale_x_continuous(breaks = 1:12) +
   scale_y_continuous(breaks = seq(0, 30, 3)) +
-  theme_minimal(base_size = 15) +
+  facet_wrap(~dataset) +
   labs(
-    y = 'Average Temperature (C)'
+    title = "Average Monthly Temperature at Sevilleta NWR (2020-2023)",
+    x = "Month",
+    y = "Mean Temperature (°C)"
   ) +
+  theme_minimal(base_size = 15) +
   theme(
-    axis.line = element_line(linewidth = .5, color = 'black')
+    axis.line = element_line(linewidth = .5, color = 'black'),
+    strip.text = element_text(face = "bold")
   )
 
-# Reveals systematic bias of certain statiosn toward clusters of extreme values--
-# would consider removing these in additional analysis, and at minimum
-# investigate possibility of recording unit malfunction.
+# EDA reveals systematic bias of certain stations toward clusters of extreme 
+# values--would consider removing these in additional analysis, and at minimum
+# investigate possibility of recording unit malfunction to explain unusually high
+# summer temperatures captured by stations 42, 44.
